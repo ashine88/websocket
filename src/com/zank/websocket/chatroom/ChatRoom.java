@@ -1,28 +1,40 @@
 package com.zank.websocket.chatroom;
 
+import java.util.Calendar;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 
 public class ChatRoom {
 	//房间id
 	private long id;
 	//标题
-	private String title;
+	private String name;
+	//描述
+	private String description;
 	//拥有者
 	private long owner;
 	//最大观众数量
-	private int maxUser;
+	private int maxusers;
 	
 	private Map<Long, User> users = new ConcurrentHashMap<Long, User>();
+	
+	private Map<Long, Long> banneds = new ConcurrentHashMap<Long, Long>();
 	
 	public ChatRoom() {
 	}
 	
-	public ChatRoom(long id, String title, long owner, int maxUser){
+	public ChatRoom(long id, String name, long owner, int maxUser){
 		this.id = id;
-		this.title = title;
 		this.owner = owner;
-		this.maxUser = maxUser;
+		this.name = name;
+		this.maxusers = maxUser;
+	}
+	public boolean isExists(long userId){
+		return users.containsKey(userId);
 	}
 	
 	public void addUser(User user){
@@ -37,8 +49,10 @@ public class ChatRoom {
 		this.users = users;
 	}
 
-	public void removeConnection(long cid){
+	public void removeUser(long cid){
+		User user = users.get(cid);
 		users.remove(cid);
+		user.closeConnection();
 	}
 	
 	public long getId() {
@@ -47,28 +61,99 @@ public class ChatRoom {
 	public void setId(long id) {
 		this.id = id;
 	}
-	public String getTitle() {
-		return title;
-	}
-	public void setTitle(String title) {
-		this.title = title;
-	}
+	 
 	public long getOwner() {
 		return owner;
 	}
 	public void setOwner(long owner) {
 		this.owner = owner;
 	}
-	public int getMaxUser() {
-		return maxUser;
-	}
-	public void setMaxUser(int maxUser) {
-		this.maxUser = maxUser;
-	}
 	
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	public int getMaxusers() {
+		return maxusers;
+	}
+
+	public void setMaxusers(int maxusers) {
+		this.maxusers = maxusers;
+	}
+
 	public int usersSize(){
 		return users.size();
 	}
 	
+	/**
+	 * release all connection
+	 */
+	public void release(){
+		if(null != users && users.size() > 0){
+			Iterator<Entry<Long, User>> it = users.entrySet().iterator();
+			while(it.hasNext()){
+				User user = it.next().getValue();
+				user.closeConnection();
+			}
+		}
+	}
 	
+	public void sendMessage(TextWebSocketFrame frame, long from){
+		Iterator<Entry<Long, User>> it = users.entrySet().iterator();
+		while(it.hasNext()){
+			Entry<Long, User> entry = it.next();
+			long uid = entry.getKey();
+			if(uid != from){
+				User user = entry.getValue();
+				user.getChannel().writeAndFlush(frame);
+			}
+		}
+	}
+	
+	/**
+	 * banned user 
+	 * @param userId
+	 * @param time	minute
+	 */
+	public void banned(long userId, int time){
+		Calendar cal = Calendar.getInstance();
+		if(time == -1){
+			System.out.println(String.format("banned user[%d] forever!", userId));
+			cal.set(Calendar.YEAR, 3000);
+		}else{
+			cal.add(Calendar.MINUTE, time);
+		}
+		banneds.put(userId, cal.getTimeInMillis());
+	}
+	/**
+	 * 判断用户是否被禁言
+	 * @param userId
+	 * @return
+	 */
+	public boolean isBanned(long userId){
+		long time = System.currentTimeMillis();
+		if(banneds.containsKey(userId)){
+			long btime = banneds.get(userId);
+			if(time - btime <= 0){
+				System.out.println(String.format("user[%d] banned time is over", userId));
+				banneds.remove(userId);
+				return false;
+			}
+			return true;
+		}
+		return false;
+		
+	}
 }

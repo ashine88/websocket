@@ -2,8 +2,7 @@ package com.zank.websocket.server;
 
 import java.util.List;
 
-import com.google.gson.JsonObject;
-import com.zank.websocket.common.ChatRoomRequest;
+import com.zank.websocket.common.CTWebScoketRequest;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
@@ -13,8 +12,8 @@ public class WebSocketRequstDecoder extends MessageToMessageDecoder<TextWebSocke
 
 	@Override
 	protected void decode(ChannelHandlerContext ctx, TextWebSocketFrame msg, List<Object> out) throws Exception {
-		String content = msg.text();
-		ChatRoomRequest req = new ChatRoomRequest(content);
+		System.out.println(String.format("msg from websocket : ", msg.text()));
+		CTWebScoketRequest req = new CTWebScoketRequest( msg.text());
 		out.add(req);
 	}
 }

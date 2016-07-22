@@ -21,6 +21,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
 import io.netty.handler.ssl.SslContext;
@@ -43,9 +44,12 @@ public class WebSocketServerInitializer extends ChannelInitializer<SocketChannel
         }
         pipeline.addLast("httpServerCodec", new HttpServerCodec());
         pipeline.addLast("httpObjectAggregator", new HttpObjectAggregator(65536));
-        pipeline.addLast("ompressionHandler", new WebSocketServerCompressionHandler());
-        pipeline.addLast("websocketServerHandler", new WebSocketServerHandler());
-        pipeline.addLast("websocketReqeustDecoder", new WebSocketRequstDecoder());
+        pipeline.addLast("compressionHandler", new WebSocketServerCompressionHandler());
+        
+        pipeline.addLast("serverHandler", new ServerHandler());
+        pipeline.addLast("httpRequestDecoder", new HttpRequestDecoder());
+        pipeline.addLast("websocketRequestDecoder", new WebSocketRequstDecoder());
         pipeline.addLast("chatRoomHandler", new ChatRoomHandler(pool));
+        
     }
 }
